@@ -1,0 +1,117 @@
+# VBA-Challenge
+
+Sub StockVBAChallenge()
+
+'Set Variables to store for later use
+Dim ws As Worksheet
+Dim select_index As Double
+Dim first_row As Double
+Dim select_row As Double
+Dim last_year As Double
+Dim year_opening As Single
+Dim year_closing As Single
+Dim volume As Double
+
+'Run the same process on every worksheet in the workbook
+For Each ws In Sheets
+    Worksheets(ws.Name).Activate
+    select_index = 2
+    first_row = 2
+    select_row = 2
+    last_row = Cells(Rows.Count, 1).End(xlUp).Row
+    volume = 0
+    
+'Set headers in Summary Table 1
+    Cells(1, 9).Value = "Ticker"
+    Cells(1, 10).Value = "Yearly Change"
+    Cells(1, 11).Value = "Percent Change"
+    Cells(1, 12).Value = "Total Volume"
+    
+'Set column and row headers in Summary Table 2
+    Cells(1, 15).Value = "Ticker"
+    Cells(1, 16).Value = "Value"
+    Cells(2, 14).Value = "Greatest % Increase"
+    Cells(3, 14).Value = "Greatest % Decrease"
+    Cells(4, 14).Value = "Greatest Total Volume"
+    
+'Loop through all rows to find all the different tickers, places unique list of tickers in column I
+For I = first_row To last_row
+    tickers1 = Cells(I, 1).Value
+    tickers2 = Cells(I - 1, 1).Value
+    If tickers1 <> tickers2 Then
+    Cells(select_row, 9).Value = tickers1
+    select_row = select_row + 1
+End If
+    Next I
+
+'Loop through all rows to calculate the volume, until the ticker changes. Once changed, reset volume/continue.
+For I = first_row To last_row + 1
+    tickers1 = Cells(I, 1).Value
+    tickers2 = Cells(I - 1, 1).Value
+    
+    If tickers1 = tickers2 And I > 2 Then
+    volume = volume + Cells(I, 7).Value
+    
+    ElseIf I > 2 Then
+    Cells(select_index, 12).Value = volume
+    select_index = select_index + 1
+    volume = 0
+    
+    Else
+    volume = volume + Cells(I, 7).Value
+End If
+    Next I
+    
+'Loop through all rows and assign year_opening/closing when ticker changes.
+select_index = 2
+
+For I = first_row To last_row
+    If Cells(I, 1).Value <> Cells(I + 1, 1).Value Then
+    year_closing = Cells(I, 6).Value
+    
+    ElseIf Cells(I, 1).Value <> Cells(I - 1, 1).Value Then
+    year_opening = Cells(I, 3).Value
+End If
+
+    If year_opening > 0 And year_closing > 0 Then
+        increase = year_closing - year_opening
+        percent_increase = increase / year_opening
+        Cells(select_index, 10).Value = increase
+        Cells(select_index, 11).Value = FormatPercent(percent_increase)
+        year_closing = 0
+        year_opening = 0
+        select_index = select_index + 1
+End If
+    Next I
+    
+'Use functions to find the max and min values for Summary Table 2
+max_percent = WorksheetFunction.Max(ActiveSheet.Columns("K"))
+min_percent = WorksheetFunction.Min(ActiveSheet.Columns("K"))
+highest_volume = WorksheetFunction.Max(ActiveSheet.Columns("L"))
+
+Range("P2").Value = FormatPercent(max_percent)
+Range("P3").Value = FormatPercent(min_percent)
+Range("P4").Value = highest_volume
+
+'Loop through columns K and L to find the min and max percent, applies to Summary Table 2
+For I = first_row To last_row
+    If max_percent = Cells(I, 11).Value Then
+        Range("O2").Value = Cells(I, 9).Value
+    ElseIf min_percent = Cells(I, 11).Value Then
+        Range("O3").Value = Cells(I, 9).Value
+    ElseIf highest_volume = Cells(I, 12).Value Then
+        Range("O4").Value = Cells(I, 9).Value
+End If
+    Next I
+    
+'Applies red or green color to column J, based on percent. Greater than 0 = green. Less than 0 = red
+For I = first_row To last_row
+    If Cells(I, 10).Value > 0 Then
+        Cells(I, 10).Interior.ColorIndex = 4
+    Else
+        Cells(I, 10).Interior.ColorIndex = 3
+End If
+    Next I
+        Next ws
+    
+End Sub
